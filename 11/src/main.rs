@@ -2,21 +2,36 @@ mod utils;
 use utils::get_lines;
 
 fn main() {
-    let lines = get_lines("sample.txt");
-    // let lines = get_lines("input.txt");
-    part_1(lines);
+    //let lines = get_lines("sample.txt");
+    let lines = get_lines("input.txt");
+    //part_1(lines);
+    part_2(lines);
 }
 
 fn part_1(mut lines: Vec<Vec<i64>>) {
-    let mut count = 9;
+    let mut count = 0;
     for i in 0..100 {
         count += simulate(&mut lines);
-        println!("After step {}", i + 1);
-        // puts(&lines);
-        dbg!(count);
+        println!("After step {}: {}", i + 1, count);
+        //puts(&lines);
+        //dbg!(count);
     }
     dbg!(count);
 }
+
+fn part_2(mut lines: Vec<Vec<i64>>) {
+    let mut iteration = 0;
+    let target = lines.len() * lines[0].len();
+    loop {
+        iteration += 1;
+        let count = simulate(&mut lines);
+        if count == target as i64 {
+            break;
+        }
+    }
+    dbg!(iteration);
+}
+
 
 fn simulate(lines: &mut Vec<Vec<i64>>) -> i64 {
     let mut count = 0;
@@ -30,10 +45,12 @@ fn simulate(lines: &mut Vec<Vec<i64>>) -> i64 {
     let width = lines[0].len();
     loop {
         let mut did_it = false;
+        let mut count_this_round = 0;
         for y in 0..lines.len() {
             for x in 0..width {
                 if lines[y][x] > 9 {
-                    count += 1;
+                    count_this_round += 1;
+                    //count += 1;
                     lines[y][x] = 0;
                     did_it = true;
                     flash_neighbors(lines, x, y);
@@ -43,9 +60,16 @@ fn simulate(lines: &mut Vec<Vec<i64>>) -> i64 {
         if !did_it {
             break;
         }
-        // puts(lines);
+        //dbg!(count_this_round);
     }
 
+    for value in lines.iter_mut().flatten() {
+        if *value == 0 {
+            count += 1;
+        }
+    }
+
+    //puts(lines);
     return count;
 }
 
@@ -53,7 +77,12 @@ fn puts(lines: &Vec<Vec<i64>>) {
     let width = lines[0].len();
     for y in 0..lines.len() {
         for x in 0..width {
-            print!("{}", lines[y][x].min(9));
+            if lines[y][x] == 0 {
+                print!("0");
+            } else {
+                print!(" ");
+            }
+            //print!("{}", lines[y][x].min(9));
         }
         println!();
     }
