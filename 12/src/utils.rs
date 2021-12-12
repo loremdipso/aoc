@@ -39,4 +39,12 @@ fn insert_node(nodes: &mut HashMap<String, Node>, a_name: &str, b_name: &str) {
                 children: HashSet::new()
             }
         ).children.insert(b_name.to_owned());
+
+    nodes.entry(b_name.to_owned())
+        .or_insert_with(||
+            Node {
+                name: b_name.to_owned(),
+                children: HashSet::new()
+            }
+        ).children.insert(a_name.to_owned());
 }

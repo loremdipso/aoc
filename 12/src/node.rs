@@ -9,7 +9,11 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn isBig(&self) -> bool {
-        return self.name.chars().nth(0).unwrap().is_uppercase();
+    pub fn is_big(name: &String) -> bool {
+        return name.chars().nth(0).unwrap().is_uppercase();
+    }
+
+    pub fn is_small(name: &String) -> bool {
+        return !Node::is_big(name);
     }
 }
