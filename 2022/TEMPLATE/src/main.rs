@@ -13,8 +13,3 @@ fn part_1(filename: &str) {
     let lines = utils::get_lines::<i64>(filename);
     dbg!(&lines);
 }
-
-fn part_2(filename: &str) {
-    let lines = utils::get_lines::<i64>(filename);
-    dbg!(&lines);
-}
