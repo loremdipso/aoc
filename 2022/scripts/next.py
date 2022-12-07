@@ -9,7 +9,7 @@ import shutil
 # Will create the next aoc problem and attempt to also pull the data for it
 # Or...
 # Usage: ./next.py #
-# Will attempt to just 
+# Will attempt to just
 
 def main(args):
     next_day = get_next_question_number()
@@ -31,8 +31,8 @@ def main(args):
         f.write(puzzle.input_data)
 
     # and, finally, open our browser and editor
-    os.system("firefox --new-tab https://adventofcode.com/%d/day/%d" % (year, next_day))
-    os.system("cd %s && code ." % (target))
+    os.system("firefox --new-tab https://adventofcode.com/%d/day/%d &" % (year, next_day))
+    os.system("cd %s && code . *" % (target))
 
 
 def get_current_year():
