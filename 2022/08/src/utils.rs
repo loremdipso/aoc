@@ -54,3 +54,19 @@ where
     }
     return rv;
 }
+
+pub fn get_trees(filename: &str) -> Vec<Vec<i32>> {
+    let mut rv = vec![];
+    if let Ok(lines) = read_lines(filename) {
+        for line in lines {
+            if let Ok(line) = line {
+                rv.push(
+                    line.chars()
+                        .map(|c| c.to_string().parse::<i32>().unwrap())
+                        .collect(),
+                );
+            }
+        }
+    }
+    return rv;
+}
