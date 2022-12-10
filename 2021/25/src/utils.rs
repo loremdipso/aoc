@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{self, stdin, BufRead};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -53,4 +53,22 @@ where
         }
     }
     return rv;
+}
+
+pub fn get_fishes(filename: &str) -> Vec<Vec<char>> {
+    let mut rv = vec![];
+    if let Ok(lines) = read_lines(filename) {
+        for line in lines {
+            if let Ok(line) = line {
+                rv.push(line.chars().collect());
+            }
+        }
+    }
+    return rv;
+}
+
+pub fn readline() -> String {
+    let mut temp = String::new();
+    stdin().read_line(&mut temp).unwrap();
+    return temp;
 }

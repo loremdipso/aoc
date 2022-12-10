@@ -21,7 +21,7 @@ def main(args):
 
     # if we got here then it's okay, let's move on
     target = "%02d" % (next_day)
-    shutil.copytree('TEMPLATE', target)
+    shutil.copytree(os.jath.join('..', 'TEMPLATE'), target)
 
     # write our data out
     with open(os.path.join(target, "sample.txt"), "w") as f:
