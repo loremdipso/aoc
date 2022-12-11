@@ -20,7 +20,7 @@ def open_editor(path):
     os.system("cd %s && code . *" % (path))
 
 def main(args):
-    day = get_day(args)
+    day = get_day((args + [None])[0])
     year = get_year_from_folder()
 
     # if we got here then it's okay, let's move on
@@ -48,9 +48,8 @@ def main(args):
     open_problem_description(year, day)
 
 
-def get_day(args):
-    if len(args) == 1:
-        return int(args[0])
+def get_day(day):
+    if day: return int(day)
     return get_next_question_number()
 
 def get_year_from_folder():
