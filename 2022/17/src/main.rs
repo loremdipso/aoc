@@ -1,11 +1,11 @@
 #![allow(dead_code, unused_variables)]
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 mod utils;
 
 fn main() {
-    let filename = "sample.txt";
-    // let filename = "input.txt";
+    // let filename = "sample.txt";
+    let filename = "input.txt";
 
     // part_1(filename);
     part_2(filename);
@@ -15,10 +15,10 @@ fn part_1(filename: &str) {
     let directions = &utils::get_lines::<String>(filename)[0];
     let mut directions = directions.chars().cycle();
 
-    let mut board = Board::default();
-    board.max_x = 6;
+    let mut board = Board::new(6);
 
     let mut count = 0;
+    // let max_pieces = 2;
     let max_pieces = 2022;
     for tetromino in get_tetrominos().iter().cycle() {
         count += 1;
@@ -45,17 +45,37 @@ fn part_1(filename: &str) {
 
 fn part_2(filename: &str) {
     let directions = &utils::get_lines::<String>(filename)[0];
+    let num_chars = directions.len();
     let mut directions = directions.chars().cycle();
 
-    let mut board = Board::default();
-    board.max_x = 6;
+    let mut board = Board::new(6);
 
     let mut count = 0;
+    // let max_pieces: isize = 10;
     let max_pieces: isize = 1_000_000_000_000;
-    for tetromino in get_tetrominos().iter().cycle() {
-        if count % 1000 == 0 {
-            println!("{} / {}", count, max_pieces);
+    let tetrominos = get_tetrominos();
+    let mut char_index = 0;
+    let mut map: HashMap<(Vec<isize>, usize), (isize, isize)> = HashMap::new();
+    let mut extra_height = 0;
+    let mut did_it = false;
+    for (index, tetromino) in tetrominos.iter().cycle().enumerate() {
+        // find cycle, use that to save time
+        if !did_it && index > 0 && index % tetrominos.len() == 0 {
+            let current_top = board.get_top_row();
+            let key = (current_top, char_index % num_chars);
+            if let Some((old_count, old_max_y)) = map.get(&key) {
+                let height_gain_per_it = board.max_y - old_max_y;
+                let blocks_per_it = count - old_count;
+
+                let extra_its = (max_pieces - count) / blocks_per_it;
+                extra_height = extra_its * height_gain_per_it;
+                count += extra_its * blocks_per_it;
+                did_it = true;
+            } else {
+                map.insert(key, (count, board.max_y));
+            }
         }
+
         count += 1;
         if count > max_pieces {
             break;
@@ -66,6 +86,7 @@ fn part_2(filename: &str) {
         loop {
             // board.print(&tetromino);
             board.push(&mut tetromino, directions.next().unwrap());
+            char_index += 1;
             if !board.fall(&mut tetromino) {
                 break;
             }
@@ -75,7 +96,7 @@ fn part_2(filename: &str) {
         // board.print(&tetromino);
     }
 
-    dbg!(board.max_y);
+    dbg!(board.max_y + extra_height);
 }
 
 fn get_tetrominos() -> Vec<Tetromino> {
@@ -154,9 +175,28 @@ struct Board {
 }
 
 impl Board {
+    pub fn new(max_x: isize) -> Self {
+        let mut temp = Self::default();
+        temp.max_x = max_x;
+        return temp;
+    }
+
+    pub fn get_top_row(&self) -> Vec<isize> {
+        let mut top_row = vec![isize::MAX; (self.max_x + 1) as usize];
+
+        // get in relation to max_y
+        for point in &self.points {
+            let x = point.x as usize;
+            let y = (self.max_y - point.y).abs();
+            top_row[x] = top_row[x].min(y);
+        }
+
+        return top_row;
+    }
+
     pub fn print(&self, tetromino: &Tetromino) {
         for y in (0..(self.max_y + 6)).rev() {
-            for x in 0..7 {
+            for x in 0..(self.max_x + 1) {
                 if self.points.contains(&Point::new(x, y)) {
                     print!("#");
                 } else if tetromino.points.contains(&Point::new(x, y)) {
@@ -202,7 +242,7 @@ impl Board {
                 return false;
             }
 
-            if self.points.contains(&point) {
+            if self.intersects(&point) {
                 return false;
             }
 
@@ -220,5 +260,13 @@ impl Board {
             }
             self.points.insert(point.clone());
         }
+    }
+
+    fn intersects(&self, point: &Point) -> bool {
+        if self.points.contains(&point) {
+            return true;
+        }
+
+        return false;
     }
 }
