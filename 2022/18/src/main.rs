@@ -1,7 +1,9 @@
 #![allow(dead_code, unused_variables)]
 
-use ordered_float::OrderedFloat;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashSet, VecDeque},
+    ops::Add,
+};
 mod utils;
 
 fn main() {
@@ -9,155 +11,140 @@ fn main() {
     let filename = "input.txt";
 
     // part_1(filename);
-
-    // 4050 is too high
     part_2(filename);
 }
 
-type Point = (OrderedFloat<f64>, OrderedFloat<f64>, OrderedFloat<f64>);
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
+struct Point(isize, isize, isize);
 
-fn parse(filename: &str) -> Vec<Point> {
-    return utils::get_generic(filename, |l| -> Point {
+struct Bounds(isize, isize, isize, isize, isize, isize);
+impl Bounds {
+    fn within_bounds(&self, adj_point: Point) -> bool {
+        let slop = 1;
+        return adj_point.0 > self.0 - slop
+            && adj_point.0 < self.1 + slop
+            && adj_point.0 > self.2 - slop
+            && adj_point.0 < self.3 + slop
+            && adj_point.0 > self.4 - slop
+            && adj_point.0 < self.5 + slop;
+    }
+}
+
+impl Add for Point {
+    type Output = Self;
+
+    #[inline(always)]
+    fn add(self, other: Point) -> Point {
+        Point(self.0 + other.0, self.1 + other.1, self.2 + other.2)
+    }
+}
+
+fn parse(filename: &str) -> HashSet<Point> {
+    return utils::get_generic_set(filename, |l| -> Point {
         let mut split = l.split(",");
-        (
-            OrderedFloat(split.next().unwrap().parse::<f64>().unwrap()),
-            OrderedFloat(split.next().unwrap().parse::<f64>().unwrap()),
-            OrderedFloat(split.next().unwrap().parse::<f64>().unwrap()),
+        Point(
+            split.next().unwrap().parse::<isize>().unwrap(),
+            split.next().unwrap().parse::<isize>().unwrap(),
+            split.next().unwrap().parse::<isize>().unwrap(),
         )
     });
 }
 
-const SIDE_DELTAS: [(f64, f64, f64); 6] = [
-    (0_f64, 0_f64, 0.5_f64),
-    (0_f64, 0_f64, -0.5_f64),
-    (0_f64, 0.5_f64, 0_f64),
-    (0_f64, -0.5_f64, 0_f64),
-    (0.5_f64, 0_f64, 0_f64),
-    (-0.5_f64, 0_f64, 0_f64),
+const DELTAS: [Point; 6] = [
+    Point(0, 0, 1),
+    Point(0, 0, -1),
+    Point(0, 1, 0),
+    Point(0, -1, 0),
+    Point(1, 0, 0),
+    Point(-1, 0, 0),
 ];
-
-const CUBE_DELTAS: [(f64, f64, f64); 6] = [
-    (0_f64, 0_f64, 1_f64),
-    (0_f64, 0_f64, -1_f64),
-    (0_f64, 1_f64, 0_f64),
-    (0_f64, -1_f64, 0_f64),
-    (1_f64, 0_f64, 0_f64),
-    (-1_f64, 0_f64, 0_f64),
-];
-
-const MAX_ITS: usize = 1500;
 
 const DELTA: f64 = 0.0001;
 
 fn part_1(filename: &str) {
-    let mut all_sides: HashSet<Point> = HashSet::new();
-    let mut covered_sides: HashSet<Point> = HashSet::new();
-    let cubes = parse(filename);
+    let cubes: HashSet<Point> = parse(filename);
 
+    let mut total = 0;
     for cube in &cubes {
-        for delta in SIDE_DELTAS {
-            let side = (cube.0 + delta.0, cube.1 + delta.1, cube.2 + delta.2);
-            if all_sides.contains(&side) {
-                covered_sides.insert(side);
+        for delta in DELTAS {
+            let adj_point = *cube + delta;
+            if !cubes.contains(&adj_point) {
+                total += 1;
             }
-            all_sides.insert(side);
         }
     }
 
-    let answer = all_sides.len() - covered_sides.len();
-    dbg!(answer);
+    dbg!(total);
 }
 
 fn part_2(filename: &str) {
-    let mut all_sides: HashSet<Point> = HashSet::new();
-    let mut covered_sides: HashSet<Point> = HashSet::new();
     let cubes = parse(filename);
+    let mut land_locked: HashSet<Point> = HashSet::new();
 
-    for cube in &cubes {
-        for delta in SIDE_DELTAS {
-            let side = (cube.0 + delta.0, cube.1 + delta.1, cube.2 + delta.2);
-            if all_sides.contains(&side) {
-                covered_sides.insert(side);
-            }
-            all_sides.insert(side);
-        }
-    }
+    let bounds = Bounds(
+        // x
+        cubes.iter().map(|c| c.0).min().unwrap(),
+        cubes.iter().map(|c| c.0).max().unwrap(),
+        // y
+        cubes.iter().map(|c| c.1).min().unwrap(),
+        cubes.iter().map(|c| c.1).max().unwrap(),
+        // z
+        cubes.iter().map(|c| c.2).min().unwrap(),
+        cubes.iter().map(|c| c.2).max().unwrap(),
+    );
 
-    // for side in &all_sides {
-    //     if covered_sides.contains(side) {
-    //         println!("{:4}, {:4}, {:4}", side.0, side.1, side.2);
-    //     }
-    // }
-
-    // Now, we just need to recursively find all air pockets.
-    // DFS every side? There aren't that many
-    let mut internal_sides: usize = 0;
-    for (index, side) in all_sides.iter().enumerate() {
-        println!("{} / {}", index, all_sides.len());
-        if !covered_sides.contains(side) {
-            if is_internal(&cubes, &all_sides, side) {
-                internal_sides += 1;
-            }
-        }
-    }
-
-    let answer = all_sides.len() - covered_sides.len() - internal_sides;
-    dbg!(answer);
-}
-
-fn is_internal(cubes: &Vec<Point>, sides: &HashSet<Point>, side: &Point) -> bool {
-    let mut visited: HashSet<Point> = HashSet::new();
-    let mut points: VecDeque<Point> = VecDeque::new();
-    points.push_back(side.clone());
-
-    let mut count = 0;
-    while let Some(point) = points.pop_front() {
-        count += 1;
-        if count > MAX_ITS {
-            return false;
+    let mut total = 0;
+    for (index, cube) in cubes.iter().enumerate() {
+        if index % 50 == 0 {
+            println!("{} / {}", index, cubes.len());
         }
 
-        for delta in SIDE_DELTAS {
-            let new_point = (point.0 + delta.0, point.1 + delta.1, point.2 + delta.2);
-
-            if valid_point(&new_point) {
-                if !visited.contains(&new_point)
-                    && !cubes.contains(&new_point)
-                    && !sides.contains(&new_point)
-                {
-                    visited.insert(new_point);
-                    points.push_front(new_point);
+        for delta in DELTAS {
+            let adj_point = *cube + delta;
+            if !cubes.contains(&adj_point) {
+                if can_reach_water(&cubes, &land_locked, &bounds, &adj_point) {
+                    total += 1;
+                } else {
+                    land_locked.insert(adj_point);
                 }
             }
         }
     }
 
-    return true;
+    dbg!(total);
 }
 
-fn valid_point(new_point: &Point) -> bool {
-    let mut have_half = false;
+fn can_reach_water(
+    cubes: &HashSet<Point>,
+    land_locked: &HashSet<Point>,
+    bounds: &Bounds,
+    point: &Point,
+) -> bool {
+    let mut seen = HashSet::new();
+    let mut points = VecDeque::new();
+    points.push_back(*point);
 
-    if new_point.0.abs() % 1_f64 > DELTA {
-        if have_half {
-            return false;
+    while let Some(point) = points.pop_front() {
+        for delta in DELTAS {
+            let adj_point = point + delta;
+
+            // if we escaped the bounds then we're gucci
+            if !bounds.within_bounds(adj_point) {
+                return true;
+            }
+
+            // if we touched a square we already tried then we're not gucci :/
+            // (slight optimization)
+            if land_locked.contains(&adj_point) {
+                return false;
+            }
+
+            if !seen.contains(&adj_point) && !cubes.contains(&adj_point) {
+                seen.insert(adj_point);
+                points.push_back(adj_point);
+            }
         }
-        have_half = true;
     }
 
-    if new_point.1.abs() % 1_f64 > DELTA {
-        if have_half {
-            return false;
-        }
-        have_half = true;
-    }
-
-    if new_point.2.abs() % 1_f64 > DELTA {
-        if have_half {
-            return false;
-        }
-        have_half = true;
-    }
-
-    return true;
+    return false;
 }

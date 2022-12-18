@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::FromStr;
@@ -62,6 +64,22 @@ pub fn get_generic<T>(filename: &str, func: ConvertLineFn<T>) -> Vec<T> {
         for line in lines {
             if let Ok(line) = line {
                 rv.push(func(&line));
+            }
+        }
+    }
+    return rv;
+}
+
+pub fn get_generic_set<T>(filename: &str, func: ConvertLineFn<T>) -> HashSet<T>
+where
+    T: Eq,
+    T: Hash,
+{
+    let mut rv: HashSet<T> = HashSet::new();
+    if let Ok(lines) = read_lines(filename) {
+        for line in lines {
+            if let Ok(line) = line {
+                rv.insert(func(&line));
             }
         }
     }
