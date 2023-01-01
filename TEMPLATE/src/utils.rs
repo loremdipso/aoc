@@ -11,59 +11,47 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-pub fn get_lines<T>(filename: &str) -> Vec<T>
+pub fn get_lines<T>(contents: &str) -> Vec<T>
 where
     T: FromStr,
     <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     let mut rv = vec![];
-    if let Ok(lines) = read_lines(filename) {
-        for line in lines {
-            if let Ok(line) = line {
-                if line.len() > 0 {
-                    rv.push(line.parse::<T>().unwrap());
-                }
-            }
+    for line in contents.lines() {
+        if line.len() > 0 {
+            rv.push(line.parse::<T>().unwrap());
         }
     }
     return rv;
 }
 
-pub fn get_groups<T>(filename: &str) -> Vec<Vec<T>>
+pub fn get_groups<T>(contents: &str) -> Vec<Vec<T>>
 where
     T: FromStr,
     <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     let mut rv = vec![];
-    if let Ok(lines) = read_lines(filename) {
-        let mut temp = vec![];
-        for line in lines {
-            if let Ok(line) = line {
-                if line.len() > 0 {
-                    temp.push(line.parse::<T>().unwrap());
-                } else {
-                    rv.push(temp);
-                    temp = vec![];
-                }
-            }
-        }
-
-        if temp.len() > 0 {
+    let mut temp = vec![];
+    for line in contents.lines() {
+        if line.len() > 0 {
+            temp.push(line.parse::<T>().unwrap());
+        } else {
             rv.push(temp);
+            temp = vec![];
         }
+    }
+
+    if temp.len() > 0 {
+        rv.push(temp);
     }
     return rv;
 }
 
 type ConvertLineFn<T> = fn(line: &str) -> T;
-pub fn get_generic<T>(filename: &str, func: ConvertLineFn<T>) -> Vec<T> {
+pub fn get_generic<T>(contents: &str, func: ConvertLineFn<T>) -> Vec<T> {
     let mut rv = vec![];
-    if let Ok(lines) = read_lines(filename) {
-        for line in lines {
-            if let Ok(line) = line {
-                rv.push(func(&line));
-            }
-        }
+    for line in contents.lines() {
+        rv.push(func(&line));
     }
     return rv;
 }
