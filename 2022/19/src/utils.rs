@@ -48,10 +48,6 @@ where
 }
 
 type ConvertLineFn<T> = fn(line: &str) -> T;
-pub fn get_generic<T>(contents: &str, func: ConvertLineFn<T>) -> Vec<T> {
-    let mut rv = vec![];
-    for line in contents.lines() {
-        rv.push(func(&line));
-    }
-    return rv;
+pub fn get_generic_groups<T>(contents: &str, func: ConvertLineFn<T>) -> Vec<T> {
+    return contents.lines().map(|s| func(s)).collect();
 }
