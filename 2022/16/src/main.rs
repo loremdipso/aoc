@@ -4,13 +4,14 @@
 extern crate lazy_static;
 
 use bit_set::BitSet;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 mod utils;
 use regex::Regex;
 
 lazy_static! {
-// Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
-    static ref BIG_RE: Regex = Regex::new(r"Valve ([A-Z]+) has flow rate=([0-9]+); tunnel[s]* lead[s]* to valve[s]* (.*)").unwrap();
+    static ref BIG_RE: Regex =
+        Regex::new(r"Valve ([A-Z]+) has flow rate=([0-9]+); tunnel[s]* lead[s]* to valve[s]* (.*)")
+            .unwrap();
 }
 
 fn main() {
@@ -26,20 +27,21 @@ fn part_1(filename: &str) {
     let (name_map, graph) = get_graph(filename);
     dbg!(&graph);
 
+    let reachable_mapping = get_reachable_mapping(&graph);
+    dbg!(&name_map);
+    dbg!(&reachable_mapping);
+
     let mut dead_states = vec![];
     let mut states = vec![State::new(0, graph.len())];
 
-    let mut unique_states = HashMap::new();
-
-    let max = 30;
+    let max = 20;
     let mut new_states = Vec::new();
     for day in 0..max {
         println!("{} / {}. States: {}", day, max, states.len());
 
-        // NOTE: naive solution is too slow. Need to speed up somehow.
-
         let num_states = states.len();
-        new_states.clear();
+        new_states = Vec::with_capacity(num_states);
+
         for state in &mut states {
             // increment the current flow-rate
             state.total += state.total_flow_rate;
@@ -61,7 +63,7 @@ fn part_1(filename: &str) {
             // look for potential moves at the current position
             for neighbor in &current_node.edges {
                 // just move there
-                if !state.seen_since_last_open.contains(*neighbor) {
+                if valid_move(state, *neighbor, &reachable_mapping) {
                     did_a_thing = true;
                     let mut temp = state.clone();
                     temp.current_position = *neighbor;
@@ -79,55 +81,7 @@ fn part_1(filename: &str) {
         }
 
         // swap it out
-        states.clear();
-
-        unique_states.clear(); // workhorse
-        let mut ignore = HashSet::new();
-        for (index, state) in new_states.iter().enumerate() {
-            let key = (
-                state.current_position,
-                state.open.clone(),
-                // state.seen_since_last_open.clone(),
-            );
-
-            let new_a = state.total_flow_rate;
-            let new_b = state.total;
-            if let Some((a, b)) = unique_states.get(&key) {
-                match is_new_better(*a, new_a, *b, new_b, max - day) {
-                    Answer::Yes => {
-                        unique_states.insert(key, (state.total_flow_rate, state.total));
-                    }
-                    Answer::No => {
-                        // do nothing
-                    }
-                    Answer::Maybe => {
-                        // be save, save the state off
-                        ignore.insert(index);
-                    }
-                };
-            } else {
-                unique_states.insert(key, (state.total_flow_rate, state.total));
-            }
-        }
-
-        println!("Before: {}", &new_states.len());
-        for (index, state) in new_states.iter().enumerate() {
-            if ignore.contains(&index) {
-                states.push(state.clone());
-            } else {
-                let key = (
-                    state.current_position,
-                    state.open.clone(),
-                    // state.seen_since_last_open.clone(),
-                );
-
-                let (a, b) = unique_states.get(&key).unwrap();
-                if *a == state.total_flow_rate && *b == state.total {
-                    states.push(state.clone());
-                }
-            }
-        }
-        println!("After: {}", states.len());
+        states = new_states;
     }
 
     let max = states.iter().max_by_key(|e| e.total).unwrap();
@@ -137,27 +91,56 @@ fn part_1(filename: &str) {
     max_dead.print("Max dead: ", &name_map);
 }
 
-enum Answer {
-    Yes,
-    No,
-    Maybe,
+fn get_reachable_mapping(graph: &Vec<Node>) -> HashMap<(usize, usize), BitSet> {
+    let mut mapping: HashMap<(usize, usize), BitSet> = HashMap::new();
+    for current in 0..graph.len() {
+        for neighbor in &graph[current].edges {
+            let reachable = get_reachable(graph, current, *neighbor);
+            mapping.insert((current, *neighbor), reachable);
+        }
+    }
+    return mapping;
 }
-fn is_new_better(
-    old_flow_rate: usize,
-    new_flow_rate: usize,
-    old_total: usize,
-    new_total: usize,
-    days_left: usize,
-) -> Answer {
-    if new_flow_rate >= old_flow_rate && new_total >= old_total {
-        return Answer::Yes;
+
+fn get_reachable(graph: &Vec<Node>, current: usize, next: usize) -> BitSet {
+    let mut reachable = BitSet::with_capacity(graph.len());
+    reachable.insert(next); // TODO: do we need this?
+
+    let mut seen = HashSet::new();
+    seen.insert(current);
+
+    let mut stack = VecDeque::new();
+    stack.push_front(next);
+
+    loop {
+        if stack.is_empty() {
+            break;
+        }
+
+        let next = stack.pop_front().unwrap();
+        for neighbor in &graph[next].edges {
+            if !seen.contains(neighbor) {
+                seen.insert(*neighbor);
+                stack.push_back(*neighbor);
+                reachable.insert(*neighbor);
+            }
+        }
     }
 
-    if old_flow_rate > new_flow_rate && old_total > new_total {
-        return Answer::No;
+    return reachable;
+}
+
+fn valid_move(
+    state: &mut State,
+    neighbor: usize,
+    reachable_mapping: &HashMap<(usize, usize), BitSet>
+) -> bool {
+    if state.seen_since_last_open.contains(neighbor) {
+        return false;
     }
 
-    return Answer::Maybe;
+    let reachable = reachable_mapping.get(&(state.current_position, neighbor)).unwrap();
+    return reachable.iter().any(|bit| !state.open.contains(bit));
 }
 
 fn get_graph(filename: &str) -> (HashMap<usize, String>, Vec<Node>) {
