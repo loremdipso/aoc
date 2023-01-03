@@ -4,8 +4,9 @@
 extern crate lazy_static;
 
 use bit_set::BitSet;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 mod utils;
+use itertools::Itertools;
 use regex::Regex;
 
 lazy_static! {
@@ -15,11 +16,11 @@ lazy_static! {
 }
 
 fn main() {
-    let filename = "sample.txt";
-    // let filename = "input.txt";
+    // let filename = "sample.txt";
+    let filename = "input.txt";
 
-    part_1(filename);
-    // part_2(filename);
+    // part_1(filename);
+    part_2(filename);
 }
 
 fn part_1(filename: &str) {
@@ -42,6 +43,54 @@ fn part_1(filename: &str) {
         30,
     );
     dbg!(max);
+}
+
+fn part_2(filename: &str) {
+    let (graph, name_map, start_pos) = get_graph(filename);
+    let reachable_mapping = get_reachable_mapping(&graph);
+    println!("Starting...");
+
+    // Don't even consider nodes that have no flow rate
+    let filtered_flow_rates = (0..graph.len())
+        .filter(|i| graph[*i].flow_rate > 0)
+        .collect();
+
+    let state = State::new(start_pos, graph.len());
+    let mut maxes = HashMap::new();
+
+    recur_2(
+        &graph,
+        &reachable_mapping,
+        &filtered_flow_rates,
+        &state,
+        0,
+        26,
+        &mut maxes,
+    );
+
+    // is_disjoint doesn't work with bitsets, so just use normal sets
+    // let a = BitSet::with_capacity(10);
+    // let b = BitSet::with_capacity(10);
+    // dbg!(a.is_disjoint(&b));
+
+    let max = maxes
+        .iter()
+        .map(|(open, cost)| (bitset_to_hashset(open), *cost))
+        .tuple_combinations()
+        .filter(|(human, elephant)| human.0.is_disjoint(&elephant.0))
+        .map(|(human, elephant)| human.1 + elephant.1)
+        .max()
+        .unwrap();
+
+    dbg!(max);
+}
+
+fn bitset_to_hashset(bitset: &BitSet) -> HashSet<usize> {
+    let mut rv = HashSet::new();
+    for bit in bitset.iter() {
+        rv.insert(bit);
+    }
+    return rv;
 }
 
 fn recur(
@@ -86,6 +135,60 @@ fn recur(
                 if temp_total > max {
                     max = temp_total;
                 }
+            }
+        }
+    }
+
+    return max;
+}
+fn recur_2(
+    graph: &Vec<Node>,
+    reachable_mapping: &ReachableMapping,
+    filtered_flow_rates: &Vec<usize>,
+    state: &State,
+    current_day: usize,
+    num_days: usize,
+    maxes: &mut HashMap<BitSet, usize>,
+) -> usize {
+    if current_day > num_days {
+        return state.total;
+    }
+
+    let mut max = state.total;
+
+    let num_nodes = graph.len();
+    let current_position = state.current_position;
+    for target_position in filtered_flow_rates {
+        if !state.open.contains(*target_position) {
+            let cost = reachable_mapping[current_position * num_nodes + target_position];
+
+            let node = &graph[*target_position];
+            let new_day = current_day + cost + 1;
+            if node.flow_rate > 0 && new_day < num_days {
+                let mut state = state.clone();
+
+                state.current_position = *target_position;
+                state.open.insert(*target_position);
+                state.total_flow_rate += node.flow_rate;
+                // just add the rest of the days
+                state.total += node.flow_rate * (num_days - new_day);
+
+                let temp_total = recur_2(
+                    graph,
+                    reachable_mapping,
+                    filtered_flow_rates,
+                    &state,
+                    new_day,
+                    num_days,
+                    maxes,
+                );
+                if temp_total > max {
+                    max = temp_total;
+                }
+
+                // TODO: this is slow (10s+). Only calculate this if we need to.
+                let entry = maxes.entry(state.open.clone()).or_default();
+                *entry = (*entry).max(state.total);
             }
         }
     }
