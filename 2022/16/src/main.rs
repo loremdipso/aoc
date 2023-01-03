@@ -68,14 +68,8 @@ fn part_2(filename: &str) {
         &mut maxes,
     );
 
-    // is_disjoint doesn't work with bitsets, so just use normal sets
-    // let a = BitSet::with_capacity(10);
-    // let b = BitSet::with_capacity(10);
-    // dbg!(a.is_disjoint(&b));
-
     let max = maxes
         .iter()
-        .map(|(open, cost)| (bitset_to_hashset(open), *cost))
         .tuple_combinations()
         .filter(|(human, elephant)| human.0.is_disjoint(&elephant.0))
         .map(|(human, elephant)| human.1 + elephant.1)
@@ -83,14 +77,6 @@ fn part_2(filename: &str) {
         .unwrap();
 
     dbg!(max);
-}
-
-fn bitset_to_hashset(bitset: &BitSet) -> HashSet<usize> {
-    let mut rv = HashSet::new();
-    for bit in bitset.iter() {
-        rv.insert(bit);
-    }
-    return rv;
 }
 
 fn recur(
