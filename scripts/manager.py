@@ -17,14 +17,18 @@ class manager():
 
     def open_day(year, day):
         target = manager.get_target(day)
-        manager.open_editor(target)
         manager.open_problem_description(year, day)
+        manager.open_editor(target)
 
     def open_problem_description(year, day):
         os.system("firefox --new-tab https://adventofcode.com/%d/day/%d &" % (year, day))
 
     def open_editor(path):
-        os.system("cd %s && vim . &" % (path))
+        # Could use to open vs code
+        #os.system("cd %s && code . &" % (path))
+        # ORRRR we could be cool and use neovim 😎
+        os.chdir(path)
+        os.execv("/usr/bin/nvim", ["."])
 
     def download_day(year, day, do_open=False):
         target = manager.get_target(day)
