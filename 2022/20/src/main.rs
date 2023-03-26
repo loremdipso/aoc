@@ -5,17 +5,17 @@ use std::collections::VecDeque;
 mod utils;
 
 fn main() {
-    let filename = include_str!("../sample.txt");
-    // let filename = include_str!("../input.txt");
+    // let filename = include_str!("../sample.txt");
+    let filename = include_str!("../input.txt");
 
     // part_1(filename);
     part_2(filename);
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Thing {
     index: usize,
-    value: i64,
+    value: isize,
 }
 
 fn part_1(contents: &str) {
@@ -40,11 +40,12 @@ fn part_2(contents: &str) {
         .iter()
         .map(|thing| Thing {
             index: thing.index,
-            value: (thing.value * key) as i64,
+            value: (thing.value * key) as isize,
         })
         .collect::<VecDeque<Thing>>();
 
-    for _ in 0..10 {
+    for index in 0..10 {
+        println!("mix iteration: {}", index + 1);
         mix(&mut numbers);
     }
 
@@ -57,73 +58,24 @@ fn part_2(contents: &str) {
 }
 
 fn mix(numbers: &mut VecDeque<Thing>) {
-    let count = numbers.len() as i64;
+    let count = numbers.len() as isize;
     for orig_index in 0..(numbers.len()) {
         let mut current_index = numbers
             .iter()
             .position(|thing| thing.index == orig_index)
-            .unwrap() as i64;
+            .unwrap() as isize;
 
+        // NOTE: after struggling mightily with this solution I caved
+        // and got this gem from https://github.com/schubart/AdventOfCode_2022_Rust/blob/master/day20/src/lib.rs
         let mut magnitude = numbers[current_index as usize].value;
 
-        let new_index = if magnitude >= 0 {
-            let mut new_index = current_index + magnitude;
-            let num_wraps = new_index / count;
-            let new_index = (new_index + num_wraps) % count;
-            new_index
-        } else {
-            // Since we got the positive case working we can just inverse the
-            // positions to get the negative case working, too.
-            // Don't judge me, math is hard.
-            let inverse_position = count - current_index;
-            let current_index = inverse_position;
-            let magnitude = magnitude.abs();
+        // Truncate. Use euclid because new_index might be negative.
+        // Length minus 1 because of problem statement: Moving an element
+        // by (n - 1) places in a list of length n leaves list unchanged.
+        let new_index = (current_index + magnitude).rem_euclid(count - 1);
 
-            let mut new_index = current_index + magnitude;
-            let num_wraps = new_index / count;
-            let new_index = (new_index + num_wraps) % count;
-            count - new_index
-        };
-
-        if new_index == current_index {
-            // FAKE
-        } else if new_index < current_index {
-            let thing = numbers.remove(current_index as usize).unwrap();
-            numbers.insert(new_index as usize, thing);
-        } else {
-            let thing = numbers.remove(current_index as usize).unwrap();
-            numbers.insert(new_index as usize, thing);
-        }
-
-        // dbg!(final_index);
-
-        // if new_index < 0 {
-        //     new_index = (numbers.len() - 2) as i64;
-        //
-        //     numbers.insert(
-        //         (new_index + 1) as usize,
-        //         numbers[current_index as usize].clone(),
-        //     );
-        // } else if delta < 0 && new_index == 0 {
-        //     new_index = (numbers.len() - 1) as i64;
-        //
-        //     numbers.insert(
-        //         (new_index + 1) as usize,
-        //         numbers[current_index as usize].clone(),
-        //     );
-        //     numbers.remove(current_index as usize).unwrap();
-        // } else if new_index >= numbers.len() as i64 {
-        //     new_index = 1;
-        //     let value = numbers.remove(current_index as usize).unwrap();
-        //     numbers.insert(new_index as usize, value);
-        // } else if delta > 0 && new_index == (numbers.len() - 1) as i64 {
-        //     new_index = 0;
-        //     let value = numbers.remove(current_index as usize).unwrap();
-        //     numbers.insert(new_index as usize, value);
-        // } else {
-        //     // performance special case: can swap if right next to each other
-        //     numbers.swap(current_index as usize, new_index as usize);
-        // }
+        let thing = numbers.remove(current_index as usize).unwrap();
+        numbers.insert(new_index as usize, thing);
     }
 }
 
@@ -131,7 +83,7 @@ fn parse_file(contents: &str) -> VecDeque<Thing> {
     let mut rv = VecDeque::new();
     for (i, line) in contents.lines().enumerate() {
         rv.push_back(Thing {
-            value: line.parse::<i64>().unwrap(),
+            value: line.parse::<isize>().unwrap(),
             index: i,
         });
     }
