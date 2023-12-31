@@ -1,8 +1,9 @@
-use copypasta::{ClipboardContext, ClipboardProvider};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::FromStr;
+
+use copypasta::{ClipboardContext, ClipboardProvider};
 
 pub fn copy_to_clipboard<T>(line: T)
 where

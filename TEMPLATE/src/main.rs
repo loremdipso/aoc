@@ -12,4 +12,5 @@ fn main() {
 fn part_1(contents: &str) {
     let lines = utils::get_lines::<String>(contents);
     dbg!(&lines);
+    utils::copy_to_clipboard("hi! :)");
 }

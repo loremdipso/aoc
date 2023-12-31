@@ -74,7 +74,7 @@ fn part_1(contents: &str) {
             let mut state = state.clone();
             state.position = new_position;
             if seen_states.insert(state.simple_state()) {
-                state.steps.push(new_position);
+                // state.steps.push(new_position);
                 heap.push(state);
             }
         }
